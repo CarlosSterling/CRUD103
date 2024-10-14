@@ -18,10 +18,15 @@ class CrearRegistro
     // metodo para registrar los datos ($nombre hace referencia al campo en el que se va a ingresar la información) 
     public function registrarDatos($nombre)
     {
+        //Validar que el nombre no esté vacío o sea nulo
+        if (empty(trim($nombre))) {
+            throw new Exception("El nombre no puede estar vacío.");
+        }
         //boque Try
         try {
+            $sql = ("INSERT INTO datos (nombre) VALUES (:nombre)");
             // Preparar la consulta SQL con un parámetro (:nombre) que se reemplazará luego
-            $stmt = $this->conexionDB->conect->prepare("INSERT INTO datos (nombre) VALUES (:nombre)");
+            $stmt = $this->conexionDB->conect->prepare($sql);
             // Asociar el parámetro :nombre con el valor pasado ($nombre)
             $stmt->bindParam(':nombre', $nombre, PDO::PARAM_STR);
             // Ejecutar la consulta SQL
@@ -34,23 +39,27 @@ class CrearRegistro
             //bloque catch    
         } catch (PDOException $error) {
             // Si ocurre algún error durante la ejecución, se captura y se muestra el mensaje de error
-            echo "Error al ingresar los datos" . $error->getMessage();
+            throw new Exception("Error al ingresar los datos" . $error->getMessage());
         }
     }
 }
 
 // Verifica si se ha enviado un formulario a través de POST
-if ($_POST) {
-    // Asigna el valor del campo 'nombre' del formulario a la variable $nombre
-    $nombre = $_POST['nombre'];
-    // Crea una instancia de la clase 'CrearRegistro'
-    $nuevoRegistro = new CrearRegistro();
-    // Llama al método 'registrarDatos' para insertar el nombre en la base de datos
-    $nuevoRegistro->registrarDatos($nombre);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Asignar el valor del campo 'nombre' del formulario a la variable $nombre, limpiando posibles caracteres especiales
+    $nombre = htmlspecialchars($_POST['nombre']);
+
+    // Intentar crear una nueva instancia de CrearRegistro y registrar los datos
+    try {
+        $nuevoRegistro = new CrearRegistro();
+        $nuevoRegistro->registrarDatos($nombre);
+    } catch (Exception $e) {
+        echo "Error: " . $e->getMessage();
+    }
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
@@ -66,9 +75,9 @@ if ($_POST) {
         <input type="text" name="nombre" placeholder="Ingrese el nombre" required>
         <button type="submit">Guardar</button>
     </form>
+
     <!-- Enlace para regresar a 'read.php', donde se mostrarán los registros -->
     <a href="read.php">Volver</a>
-
 </body>
 
 </html>

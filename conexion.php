@@ -15,12 +15,12 @@ class Conexion
             $conexion = "mysql:host=" . $this->servidor . ";dbname=" . $this->baseDatos . ";charset =utf8";
             $this->conect = new PDO($conexion, $this->usuario, $this->contrasenia);
             $this->conect->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            //echo "Conexion exitosa";
+            echo "Conexion exitosa";
         } catch (PDOException $error) {
-            echo "No se logró la conexion con la base de datos: " . $error->getMessage();
+            throw new Exception ("No se logró la conexion con la base de datos: " . $error->getMessage());
         }
     }
 }
 
-//$conexionDB = new Conexion();
+$conexionDB = new Conexion();
 

@@ -1,91 +1,109 @@
 <?php
-// Incluir el archivo que contiene la clase de conexión a la base de datos
 require_once 'conexion.php';
-// Clase para actualizar los registros en la base de datos
-class ActualizarRegistros
+
+// Clase ActualizarRegistro que encapsula la lógica de gestión de registros
+class ActualizarRegistro
 {
-    // Propiedad para manejar la conexión a la base de datos
     private $conexionDB;
-    // Constructor de la clase que inicializa la conexión
+
+    // Constructor para inicializar la conexión a la base de datos
     public function __construct()
     {
-        // Crear una instancia de la clase 'Conexion' para conectarse a la base de datos
         $this->conexionDB = new Conexion();
     }
 
-    // Método para obtener un registro específico por su ID
-    public function obtenerRegistro($id)
+    // Método para obtener un registro por ID
+    public function obtenerRegistroPorId($id)
     {
-
-        // Preparar la consulta SQL para seleccionar un registro por su ID
-        $stmt = $this->conexionDB->conect->prepare("SELECT * FROM datos WHERE id = :id");
-        // Asociar el valor de la variable $id con el parámetro :id de la consulta
-        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-        // Ejecutar la consulta
-        $stmt->execute();
-        // Retornar el resultado de la consulta como un arreglo asociativo
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->conexionDB->conect->prepare("SELECT * FROM datos WHERE id = :id");
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // Redirigir en caso de error al obtener el registro
+            header("Location: read.php?status=error&message=" . urlencode($e->getMessage()));
+            exit();
+        }
     }
 
-    // Método para actualizar un registro en la base de datos
-    public function actualizarDatos($id, $nombre)
+    // Método para actualizar un registro
+    public function actualizarRegistros($id, $nombre)
     {
+        try {
+            $stmt = $this->conexionDB->conect->prepare("UPDATE datos SET nombre = :nombre WHERE id = :id");
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            $stmt->bindParam(':nombre', $nombre, PDO::PARAM_STR);
+            $stmt->execute();
 
-        // Preparar la consulta SQL para actualizar el campo 'nombre' de un registro específico
-        $stmt = $this->conexionDB->conect->prepare("UPDATE datos SET nombre = :nombre WHERE id = :id");
-        // Asociar los valores de $id y $nombre con los parámetros :id y :nombre de la consulta
-        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-        // Ejecutar la consulta para actualizar el registro
-        $stmt->execute();
-        // Redirigir al archivo 'read.php' para mostrar los registros actualizados
-
+            // Verificar si se realizó alguna modificación
+            if ($stmt->rowCount() > 0) {
+                header("Location: read.php?status=updated");
+            } else {
+                header("Location: read.php?status=no_changes");
+            }
+            exit();
+        } catch (PDOException $e) {
+            // Redirigir en caso de error al actualizar
+            header("Location: read.php?status=error&message=" . urlencode($e->getMessage()));
+            exit();
+        }
     }
 }
 
-// Crear una instancia de la clase 'ActualizarRegistro'
-$actualizarRegistro = new ActualizarRegistros();
-// Verificar si se ha pasado un ID a través del método GET
-if (isset($_GET['id'])) {
-    $id = $_GET['id'];
-    // Obtener el registro con el ID proporcionado
-    $registro = $actualizarRegistro->obtenerRegistro($id);
+// Procesar el formulario si se recibe por GET o POST
+$nuevoRegistro = new ActualizarRegistro();
 
-    // Si se envía el formulario a través de POST, procesar la actualización
-    if ($_POST) {
-        // Obtener el valor del nombre del formulario
-        $id = $_POST['id'];
-        $nombre = $_POST['nombre'];
-        // Llamar al método 'actualizarDatos' para actualizar el registro en la base de datos
-        $registro->actualizarDatos($id, $nombre);
-        header("Location: read.php");
+// Si se recibe un ID por GET, se obtiene el registro
+if (isset($_GET['id']) && is_numeric($_GET['id']) && (int)$_GET['id'] > 0) {
+    $id = (int)$_GET['id'];
+    $nuevoDato = $nuevoRegistro->obtenerRegistroPorId($id);
+
+    // Si el registro no existe, redirigir
+    if (!$nuevoDato) {
+        header("Location: read.php?status=notfound");
         exit();
     }
 } else {
-    // Si no se ha proporcionado un ID, redirigir a 'read.php'
-    header("Location: read.php");
+    // Si no se ha proporcionado un ID válido, redirigir a 'read.php'
+    header("Location: read.php?status=invalid_id");
     exit();
 }
-?>
 
+// Si se envía un formulario por POST, se actualiza el registro
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id']) && is_numeric($_POST['id']) && (int)$_POST['id'] > 0) {
+    $id = (int)$_POST['id'];
+    $nombre = trim($_POST['nombre']);
+
+    if (!empty($nombre)) {
+        $nuevoRegistro->actualizarRegistros($id, $nombre);
+    } else {
+        // Redirigir si el nombre está vacío
+        header("Location: update.php?id=$id&status=empty_name");
+        exit();
+    }
+}
+?>
 
 <!DOCTYPE html>
 <html lang="es">
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Registro</title>
-    <link rel="stylesheet" href="style.css">
+</head>
 
 <body>
     <h1>Editar Registro</h1>
-    <form method="POST" action="update.php">
-    <input type="hidden" name="id" value="<?php echo htmlspecialchars($registro['id'], ENT_QUOTES); ?>">
-        <label for="nombre"><strong>Nombre:</strong></label>
-        <input type="text" name="nombre" placeholder="Ingrese el nombre" value="<?php echo $registro['nombre']; ?>" required>
-        <button type="submit" class="btn">Actualizar</button>
+    <form action="update.php" method="post">
+        <input type="hidden" name="id" value="<?php echo htmlspecialchars($nuevoDato['id']); ?>">
+        <label for="nombre">Nombre:</label>
+        <input type="text" name="nombre" placeholder="Ingrese el nombre" value="<?php echo htmlspecialchars($nuevoDato['nombre']); ?>" required>
+        <button type="submit">Actualizar</button>
     </form>
     <br>
-    <a href="read.php" class="btn">Volver</a>
+    <a href="read.php">Volver</a>
 </body>
 
 </html>

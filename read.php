@@ -12,31 +12,35 @@ class ListarRegistros
         // Crear una instancia de la clase 'Conexion' para manejar la base de datos
         $this->conexionDB = new Conexion();
     }
+
     // Método para obtener todos los datos de la tabla 'datos'
     public function obtenerDatos()
     {
         try {
-              // Preparar la consulta SQL para obtener todos los registros de la tabla 'datos'
-            $stmt = $this->conexionDB->conect->prepare("SELECT * FROM datos");
+            $sql =("SELECT * FROM datos");
+            // Preparar la consulta SQL para obtener todos los registros de la tabla 'datos'
+            $stmt = $this->conexionDB->conect->prepare($sql);
             // Ejecutar la consulta
             $stmt->execute();
             // Retornar todos los resultados en un formato asociativo
-            return $stmt->fetchAll(pdo::FETCH_ASSOC);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             // Si ocurre algún error durante la ejecución de la consulta, mostrar el mensaje de error
             echo "Error al obtener los datos: " . $e->getMessage();
+            return [];
         }
     }
 }
+
 // Crear una instancia de la clase 'ListarRegistros'
-$mostrarDAtos = new ListarRegistros();
+$mostrarDatos = new ListarRegistros();
 // Llamar al método 'obtenerDatos' y almacenar los resultados en la variable $datosPersonales
-$datosPersonales = $mostrarDAtos->obtenerDatos();
+$datosPersonales = $mostrarDatos->obtenerDatos();
 
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
@@ -45,38 +49,41 @@ $datosPersonales = $mostrarDAtos->obtenerDatos();
 </head>
 
 <body>
-    <h1>Resgistros</h1>
+    <h1>Registros</h1>
+
+    <!-- Enlace para crear un nuevo registro -->
+    <a href="create.php">Crear un nuevo registro</a>
+
     <!-- Tabla para mostrar los registros obtenidos -->
-    <table border 1>
-        <!-- Enlace para crear un nuevo registro -->
-        <a href="create.php">Crear un nuevo registro</a>
+    <table border="1">
         <tr>
-             <!-- Encabezados de la tabla -->
+            <!-- Encabezados de la tabla -->
             <th>Id</th>
             <th>Nombre</th>
+            <th>Acciones</th>
         </tr>
-          <!-- Verificar si hay registros disponibles -->
+
         <?php if (!empty($datosPersonales)): ?>
-             <!-- Recorrer cada registro disponible en $datosPersonales -->
-            <?php foreach ($datosPersonales as $datosPersonalesCliente): ?>
+            <!-- Recorrer cada registro disponible en $datosPersonales -->
+            <?php foreach ($datosPersonales as $datos): ?>
                 <tr>
                     <!-- Mostrar el 'id' del registro de forma segura usando htmlspecialchars -->
-                    <td><?php echo htmlspecialchars($datosPersonalesCliente['id']); ?></td>
-                    <!-- Mostrar el 'nombre' del registro de forma segura usando htmlspecialchars -->
-                    <td><?php echo htmlspecialchars($datosPersonalesCliente['nombre']); ?></td>
+                    <td><?php echo htmlspecialchars($datos['id']); ?></td>
+                    <td><?php echo htmlspecialchars($datos['nombre']); ?></td>
                     <td>
                         <!-- Opciones para editar o eliminar el registro -->
-                        <a href="update.php">Editar</a>
-                        <a href="delete.php">Eliminar</a>
+                        <a href="update.php?id=<?php echo $datos['id']; ?>">Editar</a>
+                        <a href="delete.php?id=<?php echo $datos['id']; ?>" onclick="return confirm('¿Estás seguro de eliminar este registro?')">Eliminar</a>
                     </td>
                 </tr>
             <?php endforeach; ?>
-             <!-- Si no hay registros disponibles, mostrar un mensaje -->
         <?php else: ?>
+            <!-- Mostrar un mensaje cuando no haya registros disponibles -->
             <tr>
-                <td colspan="2">No hay registros disponibles.</td>
+                <td colspan="3">No hay registros disponibles.</td>
             </tr>
         <?php endif; ?>
+
     </table>
 
 </body>
